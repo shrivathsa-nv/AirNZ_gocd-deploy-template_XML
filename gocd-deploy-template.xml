@@ -1,0 +1,560 @@
+<pipeline name="k8s-app-deployment-api-template-azure-test-v2">
+      <stage name="deployment">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="ENV">
+            <value>test</value>
+          </variable>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+          <variable name="AZURE_PAT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="deploy" timeout="60">
+            <tasks>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>scripts/deploy.sh ${API_NAME} ${GO_PIPELINE_LABEL} ${CONFIG_DIR} ${ENV} airnzdevops ${AZURE_PAT}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="smoke-test">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>test</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.t0.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="smoke-test">
+            <tasks>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>./gradlew smokeTest</arg>
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/smokeTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/smokeTest/*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="integration-test">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>test</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.t0.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="integration-test" timeout="30">
+            <tasks>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>if [ "${SUPPRESS_INTEGRATION_TESTS}" != "true" ]; then ./gradlew integrationTest --info; fi</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/integrationTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/**/*.*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="endToEndTest">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>test</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.t0.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="endToEndTest" timeout="15">
+            <tasks>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>./gradlew endToEndTest</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/endToEndTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/**/*.*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="undeploy">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="undeploy">
+            <environmentvariables>
+              <variable name="ENV">
+                <value>test</value>
+              </variable>
+            </environmentvariables>
+            <tasks>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>scripts/undeploy.sh ${API_NAME} ${ENV}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="k8s-app-deployment-api-template-azure-qual-v2">
+      <stage name="deployment">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="ENV">
+            <value>qual</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_PRE_APPROVED_CHANGE_NAME">
+            <value>DTQ/Containerised Application Deployment - AWS</value>
+          </variable>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_JWT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+          <variable name="AZURE_PAT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="deploy" timeout="60">
+            <tasks>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>scripts/deploy.sh ${API_NAME} ${GO_PIPELINE_LABEL} ${CONFIG_DIR} ${ENV} airnzdevops ${AZURE_PAT}</arg>
+                <runif status="passed" />
+                <oncancel>
+                  <exec command="/bin/bash" workingdir="changemanagement">
+                    <arg>-c</arg>
+                    <arg>scripts/closeCR-failed.sh</arg>
+                  </exec>
+                </oncancel>
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>export CHANGE_MANAGEMENT_SERVICE_NAME=${API_NAME} &amp;&amp; scripts/createCR.sh</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-failed.sh</arg>
+                <runif status="failed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+            <artifacts>
+              <artifact type="build" src="changemanagement/ChangeRequestResultCreate.txt" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="smoke-test">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>qual</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.q0.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_JWT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="smoke-test">
+            <tasks>
+              <fetchartifact artifactOrigin="gocd" srcfile="ChangeRequestResultCreate.txt" dest="changemanagement" pipeline="" stage="deployment" job="deploy">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>./gradlew smokeTest</arg>
+                <runif status="passed" />
+                <oncancel>
+                  <exec command="/bin/bash" workingdir="changemanagement">
+                    <arg>-c</arg>
+                    <arg>scripts/closeCR-failed.sh</arg>
+                  </exec>
+                </oncancel>
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-failed.sh</arg>
+                <runif status="failed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-success.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/smokeTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/smokeTest/*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="integration-test">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>qual</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.q0.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="integration-test" timeout="30">
+            <tasks>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>./gradlew integrationTest --info</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/integrationTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/**/*.*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="endToEndTest">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>qual</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.q0.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="endToEndTest" timeout="15">
+            <tasks>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>./gradlew endToEndTest</arg>
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/endToEndTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/**/*.*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="undeploy">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="ENV">
+            <value>qual</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_PRE_APPROVED_CHANGE_NAME">
+            <value>DTQ/Containerised Application Deployment - AWS</value>
+          </variable>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_JWT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="undeploy">
+            <environmentvariables>
+              <variable name="ENV">
+                <value>qual</value>
+              </variable>
+            </environmentvariables>
+            <tasks>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>export CHANGE_MANAGEMENT_SERVICE_NAME=${API_NAME} &amp;&amp; scripts/createCR.sh</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>scripts/undeploy.sh ${API_NAME} ${ENV}</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-failed.sh</arg>
+                <runif status="failed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-success.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="k8s-app-deployment-api-template-azure-prod-v2">
+      <stage name="publish-image">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+          <variable name="AZURE_PAT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="publish-image-prod">
+            <tasks>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>./scripts/publish-image-to-prod.sh ${API_NAME} ${GO_PIPELINE_LABEL} airnzdevops ${AZURE_PAT}</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="deployment">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="ENV">
+            <value>prod</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_PRE_APPROVED_CHANGE_NAME">
+            <value>PROD/Containerised Application Deployment - AWS</value>
+          </variable>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_JWT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+          <variable name="AZURE_PAT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="deploy" timeout="60">
+            <tasks>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>export CHANGE_MANAGEMENT_SERVICE_NAME=${API_NAME} &amp;&amp; scripts/createCR.sh</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-failed.sh</arg>
+                <runif status="failed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>scripts/deploy.sh ${API_NAME} ${GO_PIPELINE_LABEL} ${CONFIG_DIR} ${ENV} airnzdevops ${AZURE_PAT}</arg>
+                <runif status="passed" />
+                <oncancel>
+                  <exec command="/bin/bash" workingdir="changemanagement">
+                    <arg>-c</arg>
+                    <arg>scripts/closeCR-failed.sh</arg>
+                  </exec>
+                </oncancel>
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+            <artifacts>
+              <artifact type="build" src="changemanagement/ChangeRequestResultCreate.txt" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="smoke-test">
+        <environmentvariables>
+          <variable name="ENV">
+            <value>prod</value>
+          </variable>
+          <variable name="SERVICE_BASE_URI">
+            <value>https://api-internal.aws-apse2.example.com</value>
+          </variable>
+          <variable name="JAVA_HOME">
+            <value>/usr/bin/java11</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_JWT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="smoke-test">
+            <tasks>
+              <fetchartifact artifactOrigin="gocd" srcfile="ChangeRequestResultCreate.txt" dest="changemanagement" pipeline="" stage="deployment" job="deploy">
+                <runif status="passed" />
+              </fetchartifact>
+              <exec command="/bin/bash" workingdir="app">
+                <arg>-c</arg>
+                <arg>./gradlew smokeTest</arg>
+                <runif status="passed" />
+                <oncancel>
+                  <exec command="/bin/bash" workingdir="changemanagement">
+                    <arg>-c</arg>
+                    <arg>scripts/closeCR-failed.sh</arg>
+                  </exec>
+                </oncancel>
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-failed.sh</arg>
+                <runif status="failed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-success.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>LARGE</resource>
+              <resource>LINUX</resource>
+            </resources>
+            <artifacts>
+              <artifact type="test" src="**/build/reports/tests/smokeTest/*" dest="testoutput" />
+              <artifact type="test" src="**/build/test-results/smokeTest/*" dest="testoutput" />
+            </artifacts>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="restart">
+        <approval type="manual" />
+        <environmentvariables>
+          <variable name="ENV">
+            <value>prod</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_PRE_APPROVED_CHANGE_NAME">
+            <value>PROD/Containerised Application Deployment - AWS</value>
+          </variable>
+          <variable name="HTTPS_PROXY">
+            <value>http://http.proxy.com:3128</value>
+          </variable>
+          <variable name="CHANGE_MANAGEMENT_JWT" secure="true">
+            <encryptedValue>xxxyyyzzz</encryptedValue>
+          </variable>
+        </environmentvariables>
+        <jobs>
+          <job name="restart">
+            <environmentvariables>
+              <variable name="ENV">
+                <value>prod</value>
+              </variable>
+            </environmentvariables>
+            <tasks>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>export CHANGE_MANAGEMENT_SERVICE_NAME=${API_NAME} &amp;&amp; scripts/createCR.sh</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="deploy">
+                <arg>-c</arg>
+                <arg>scripts/restart.sh ${API_NAME} ${ENV}</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-failed.sh</arg>
+                <runif status="failed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="changemanagement">
+                <arg>-c</arg>
+                <arg>scripts/closeCR-success.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>AWS_CSS_MANAGEMENT</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
